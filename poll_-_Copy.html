@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Poll Spammer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #282c34;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    input, textarea, button {
+      margin: 10px 0;
+      padding: 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+    }
+    input, textarea {
+      width: 300px;
+    }
+    button {
+      background-color: #61dafb;
+      color: black;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #21a1f1;
+    }
+    textarea {
+      resize: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Poll Spammer</h1>
+  <input id="token" type="text" placeholder="Enter Token" />
+  <input id="channelId" type="text" placeholder="Enter Channel ID" />
+  <input id="pollName" type="text" placeholder="Enter Poll Name (6th Option)" />
+  <textarea id="pollQuestion" rows="3" placeholder="Enter Poll Question"></textarea>
+  <button id="sendPoll">Send Poll</button>
+
+  <script>
+    const tokenInput = document.getElementById('token');
+    const channelIdInput = document.getElementById('channelId');
+    const pollNameInput = document.getElementById('pollName');
+    const pollQuestionInput = document.getElementById('pollQuestion');
+    const sendPollButton = document.getElementById('sendPoll');
+
+    function sendPoll() {
+      const token = tokenInput.value.trim();
+      const channelId = channelIdInput.value.trim();
+      const pollName = pollNameInput.value.trim();
+      const pollQuestion = pollQuestionInput.value.trim();
+
+      if (!token || !channelId || !pollName || !pollQuestion) {
+        alert('Please fill in all fields.');
+        return;
+      }
+
+      const nonce = (Math.random() * 10 ** 18).toString();
+      const pollData = {
+        mobile_network_type: "unknown",
+        content: "",
+        nonce: nonce,
+        tts: false,
+        flags: 0,
+        poll: {
+          question: {
+            text: pollQuestion
+          },
+          answers: [
+            { poll_media: { text: pollName } },
+            { poll_media: { text: pollQuestion } },
+            { poll_media: { text: pollQuestion } }
+          ],
+          allow_multiselect: false,
+          duration: 24,
+          layout_type: 1
+        }
+      };
+
+      fetch(`https://discord.com/api/v9/channels/${channelId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(pollData)
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data && data.id) {
+            setTimeout(() => endPoll(token, channelId, data.id), 5000); // End poll after 3 seconds
+          }
+        })
+        .catch((error) => {
+          console.error('Error:', error);
+        });
+
+      pollQuestionInput.value = ''; // Clear the message box instantly
+    }
+
+    function endPoll(token, channelId, messageId) {
+      fetch(`https://discord.com/api/v9/channels/${channelId}/polls/${messageId}/expire`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json'
+        }
+      }).catch((error) => {
+        console.error('Error ending poll:', error);
+      });
+    }
+
+    sendPollButton.addEventListener('click', sendPoll);
+
+    // Send poll immediately when pressing Enter in the poll question box
+    pollQuestionInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault(); // Prevent newline
+        sendPoll(); // Send poll immediately
+      }
+    });
+  </script>
+</body>
+</html>
